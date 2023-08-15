@@ -164,8 +164,7 @@ class condGANEvaluator(object):
         return clabels_emb
         
     def prepare_labels(self):
-        match_labels = Variable(torch.LongTensor(range(cfg.TEST.RP_POOL_SIZE)))
-        return match_labels
+        return Variable(torch.LongTensor(range(cfg.TEST.RP_POOL_SIZE)))
 
     def save_img_results(self, fake_imgs, attn_maps, bt_attn_maps, 
         captions, cap_lens, gen_iterations):
@@ -285,7 +284,7 @@ class condGANEvaluator(object):
 
         predictions, fake_acts_set, acts_set, w_accuracy, s_accuracy = [], [], [], [], []
         region_features_set, cnn_code_set, words_embs_set, sent_emb_set, \
-            class_ids_set, cap_lens_set = [], [], [], [], [], []
+                class_ids_set, cap_lens_set = [], [], [], [], [], []
         gen_iterations = 0
         rp_count = 0
 
@@ -296,12 +295,12 @@ class condGANEvaluator(object):
                 #######################################################
                 if cfg.TEST.USE_GT_BOX_SEG < 2:
                     imgs, acts, captions, glove_captions, cap_lens, gt_hmaps, bbox_maps_fwd, \
-                        bbox_maps_bwd, bbox_fmaps, rois, fm_rois, num_rois, gt_bt_masks, \
-                        gt_fm_bt_masks, class_ids, keys, sent_ids = prepare_data(data)
+                            bbox_maps_bwd, bbox_fmaps, rois, fm_rois, num_rois, gt_bt_masks, \
+                            gt_fm_bt_masks, class_ids, keys, sent_ids = prepare_data(data)
                 else:
                     imgs, acts, captions, glove_captions, cap_lens, bbox_maps_fwd, \
-                        bbox_maps_bwd, bbox_fmaps, rois, fm_rois, num_rois, \
-                        class_ids, keys, sent_ids = prepare_gen_data(data)
+                            bbox_maps_bwd, bbox_fmaps, rois, fm_rois, num_rois, \
+                            class_ids, keys, sent_ids = prepare_gen_data(data)
                     gt_hmaps = None
 
                 #######################################################
@@ -339,7 +338,7 @@ class condGANEvaluator(object):
                 max_len = int(torch.max(cap_lens))
                 words_embs, sent_emb = text_encoder(captions, cap_lens, max_len)
                 words_embs, sent_emb = words_embs.detach(), sent_emb.detach()
-                
+
                 mask = (captions == 0)
                 num_words = words_embs.size(2)
                 if mask.size(1) > num_words:
@@ -408,7 +407,7 @@ class condGANEvaluator(object):
 
                     rp_count = 0
                     region_features_set, cnn_code_set, words_embs_set, sent_emb_set, \
-                        class_ids_set, cap_lens_set = [], [], [], [], [], []
+                            class_ids_set, cap_lens_set = [], [], [], [], [], []
                 else:
                     region_features_set.append(region_features.cpu())
                     cnn_code_set.append(cnn_code.cpu())
@@ -447,7 +446,7 @@ class condGANEvaluator(object):
         predictions = np.concatenate(predictions, 0)
         mean, std = compute_inception_score(predictions, min(10, self.batch_size))
         mean_conf, std_conf = \
-            negative_log_posterior_probability(predictions, min(10, self.batch_size))
+                negative_log_posterior_probability(predictions, min(10, self.batch_size))
         accu_w, std_w, accu_s, std_s = np.mean(w_accuracy), np.std(w_accuracy), np.mean(s_accuracy), np.std(s_accuracy)
 
         acts_set = np.concatenate(acts_set, 0)
@@ -456,7 +455,7 @@ class condGANEvaluator(object):
         fake_mu, fake_sigma = calculate_activation_statistics(fake_acts_set)
         fid_score = calculate_frechet_distance(real_mu, real_sigma, fake_mu, fake_sigma)
 
-        fullpath = '%s/scores.txt' % (self.score_dir)
+        fullpath = f'{self.score_dir}/scores.txt'
         with open(fullpath, 'w') as fp:
             fp.write('mean, std, mean_conf, std_conf, accu_w, std_w, accu_s, std_s, fid_score \n')
             fp.write('%f, %f, %f, %f, %f, %f, %f, %f, %f' %(mean, std, 

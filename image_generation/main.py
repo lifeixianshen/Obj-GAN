@@ -50,8 +50,7 @@ def parse_args():
     parser.add_argument('--BRANCH_NUM', type=int, default=3)
     parser.add_argument('--FLAG', dest='FLAG', action='store_true')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()

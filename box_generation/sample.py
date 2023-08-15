@@ -112,11 +112,11 @@ if opt.is_training:
 
     print('train_label_lang.index2word:')
     for index in train_label_lang.index2word:
-        print('{} : {} '.format(index, train_label_lang.index2word[index]))
-     
+        print(f'{index} : {train_label_lang.index2word[index]} ')
+
     print('train_label_lang.word2count:')
     for word in train_label_lang.word2count:
-        print('{} : {} '.format(word, train_label_lang.word2count[word]))
+        print(f'{word} : {train_label_lang.word2count[word]} ')
 
     hidden_size = opt.embedding_dim
     encoder = PreEncoderRNN(train_cap_lang.n_words, nhidden=opt.embedding_dim)
@@ -153,8 +153,8 @@ if opt.is_training:
     seq2seq = t.train(encoder, decoder, train_tuples, num_epochs=10, dev_data=dev_tuples, 
         optimizer=optimizer, resume=opt.resume, is_training=opt.is_training)
 
-elif not opt.is_training and opt.load_checkpoint is not None:
-    opt.box_saving_folder = '%s_%s/'%(opt.box_saving_folder, opt.load_checkpoint)
+elif opt.load_checkpoint is not None:
+    opt.box_saving_folder = f'{opt.box_saving_folder}_{opt.load_checkpoint}/'
 
     logging.info("loading checkpoint from {}".format(os.path.join(opt.expt_dir, 
         Checkpoint.CHECKPOINT_DIR_NAME, opt.load_checkpoint)))

@@ -344,7 +344,7 @@ def _merge_a_into_b(a, b):
   for k, v in a.items():
     # a must specify keys that are in b
     if k not in b:
-      raise KeyError('{} is not a valid config key'.format(k))
+      raise KeyError(f'{k} is not a valid config key')
 
     # the types must match, too
     old_type = type(b[k])
@@ -352,16 +352,15 @@ def _merge_a_into_b(a, b):
       if isinstance(b[k], np.ndarray):
         v = np.array(v, dtype=b[k].dtype)
       else:
-        raise ValueError(('Type mismatch ({} vs. {}) '
-                          'for config key: {}').format(type(b[k]),
-                                                       type(v), k))
+        raise ValueError(
+            f'Type mismatch ({type(b[k])} vs. {type(v)}) for config key: {k}')
 
     # recursively merge dicts
     if type(v) is edict:
       try:
         _merge_a_into_b(a[k], b[k])
       except:
-        print(('Error under config key: {}'.format(k)))
+        print(f'Error under config key: {k}')
         raise
     else:
       b[k] = v
@@ -380,7 +379,7 @@ def cfg_from_list(cfg_list):
   """Set config keys via list (e.g., from command line)."""
   from ast import literal_eval
   assert len(cfg_list) % 2 == 0
-  for k, v in zip(cfg_list[0::2], cfg_list[1::2]):
+  for k, v in zip(cfg_list[::2], cfg_list[1::2]):
     key_list = k.split('.')
     d = __C
     for subkey in key_list[:-1]:
@@ -393,7 +392,7 @@ def cfg_from_list(cfg_list):
     except:
       # handle the case when v is a string literal
       value = v
-    assert type(value) == type(d[subkey]), \
-      'type {} does not match original type {}'.format(
-        type(value), type(d[subkey]))
+    assert type(value) == type(
+        d[subkey]
+    ), f'type {type(value)} does not match original type {type(d[subkey])}'
     d[subkey] = value

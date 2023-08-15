@@ -62,11 +62,7 @@ def build_super_images(real_imgs, captions, ixtoword,
     real_imgs = real_imgs[:nvis]
     if lr_imgs is not None:
         lr_imgs = lr_imgs[:nvis]
-    if att_sze == 17:
-        vis_size = att_sze * 16
-    else:
-        vis_size = real_imgs.size(2)
-
+    vis_size = att_sze * 16 if att_sze == 17 else real_imgs.size(2)
     text_convas = \
         np.ones([batch_size * FONT_MAX,
                  (max_word_num + 2) * (vis_size + 2), 3],
@@ -111,7 +107,7 @@ def build_super_images(real_imgs, captions, ixtoword,
         attn = attn_maps[i].cpu().view(1, -1, att_sze, att_sze)
         # --> 1 x 1 x 17 x 17
         attn_max = attn.max(dim=1, keepdim=True)
-        
+
         attn = torch.cat([attn_max[0], attn], 1)
         #
         attn = attn.view(-1, 1, att_sze, att_sze)
@@ -121,10 +117,7 @@ def build_super_images(real_imgs, captions, ixtoword,
         num_attn = attn.shape[0]
         #
         img = real_imgs[i]
-        if lr_imgs is None:
-            lrI = img
-        else:
-            lrI = lr_imgs[i]
+        lrI = img if lr_imgs is None else lr_imgs[i]
         row = [lrI, middle_pad]
         row_merge = [img, middle_pad]
         row_beforeNorm = []
@@ -138,10 +131,8 @@ def build_super_images(real_imgs, captions, ixtoword,
             row_beforeNorm.append(one_map)
             minV = one_map.min()
             maxV = one_map.max()
-            if minVglobal > minV:
-                minVglobal = minV
-            if maxVglobal < maxV:
-                maxVglobal = maxV
+            minVglobal = min(minVglobal, minV)
+            maxVglobal = max(maxVglobal, maxV)
         for j in range(seq_len + 1):
             if j < num_attn:
                 one_map = row_beforeNorm[j]
@@ -173,12 +164,11 @@ def build_super_images(real_imgs, captions, ixtoword,
             break
         row = np.concatenate([txt, row, row_merge], 0)
         img_set.append(row)
-    if bUpdate:
-        img_set = np.concatenate(img_set, 0)
-        img_set = img_set.astype(np.uint8)
-        return img_set, sentences
-    else:
+    if not bUpdate:
         return None
+    img_set = np.concatenate(img_set, 0)
+    img_set = img_set.astype(np.uint8)
+    return img_set, sentences
 
 
 def build_super_images2(real_imgs, captions, ixtoword,

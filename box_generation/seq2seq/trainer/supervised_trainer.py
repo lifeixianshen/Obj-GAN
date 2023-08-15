@@ -59,9 +59,9 @@ class SupervisedTrainer(object):
         # Forward propagation
         encoder_outputs, encoder_hidden = encoder(input_variable, input_lengths)
         encoder_outputs = encoder_outputs.detach()
-        encoder_hidden = tuple([h.detach() for h in encoder_hidden])
+        encoder_hidden = tuple(h.detach() for h in encoder_hidden)
         decoder_outputs, xy_gmm_params, wh_gmm_params, decoder_hidden, other = \
-            decoder(encoder_hidden, encoder_outputs, target_l_variables, 
+                decoder(encoder_hidden, encoder_outputs, target_l_variables, 
                 target_x_variables, target_y_variables, target_w_variables, 
                 target_h_variables, is_training=is_training)
         if batch_step % self.print_every == 0:
@@ -105,12 +105,8 @@ class SupervisedTrainer(object):
         self.optimizer.step()
 
         if batch_step % self.print_every == 0:
-            if total == 0:
-                l_accuracy = float('nan')
-            else:
-                l_accuracy = l_match / total
-    
-            print('l_accuracy: {}'.format(l_accuracy))
+            l_accuracy = float('nan') if total == 0 else l_match / total
+            print(f'l_accuracy: {l_accuracy}')
 
         return cur_lloss.item(), cur_bloss.item()
 
@@ -134,13 +130,13 @@ class SupervisedTrainer(object):
             print('epoch: ', epoch)
             decoder.train(True)
 
-            for batch_index in range(steps_per_epoch):
+            for _ in range(steps_per_epoch):
                 step += 1
                 step_elapsed += 1
 
                 input_variables, input_lengths, target_l_variables, target_lengths, \
-                target_x_variables, target_y_variables, target_w_variables, \
-                target_h_variables = random_batch(self.batch_size, data, self.train_cap_lang, 
+                    target_x_variables, target_y_variables, target_w_variables, \
+                    target_h_variables = random_batch(self.batch_size, data, self.train_cap_lang, 
                     self.train_label_lang, self.x_mean_std, self.y_mean_std, self.w_mean_std, 
                     self.r_mean_std, is_training=1)
 
@@ -211,8 +207,9 @@ class SupervisedTrainer(object):
                 optimizer = Optimizer(optim.Adam(decoder.parameters()), max_grad_norm=5)
             self.optimizer = optimizer
 
-        self.logger.info("Optimizer: %s, Scheduler: %s" % (self.optimizer.optimizer, 
-            self.optimizer.scheduler))
+        self.logger.info(
+            f"Optimizer: {self.optimizer.optimizer}, Scheduler: {self.optimizer.scheduler}"
+        )
 
         self._train_epoches(data, encoder, decoder, num_epochs, start_epoch, step, 
             dev_data=dev_data, is_training=is_training)

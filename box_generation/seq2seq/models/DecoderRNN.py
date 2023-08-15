@@ -149,7 +149,6 @@ class DecoderRNN(BaseRNN):
             next_xy_decoder_input = self.next_xy_embedding(torch.cat((next_x_decoder_input, 
                 y_decoder_input), dim=1))
             next_xy_decoder_input = self.next_xy_input_dropout(next_xy_decoder_input)
-            wh_hidden = torch.cat((xy_hidden, next_xy_decoder_input), dim=1)
         else:
             # sampling x and y
             pi_xy, u_x, u_y, sigma_x, sigma_y, rho_xy = xy_gmm_param
@@ -168,7 +167,7 @@ class DecoderRNN(BaseRNN):
             next_xy_decoder_input = self.next_xy_input_dropout(next_xy_decoder_input)
             next_xy_decoder_input = self.next_xy_embedding(torch.cat((next_x_decoder_input, 
                 y_decoder_input), dim=1))
-            wh_hidden = torch.cat((xy_hidden, next_xy_decoder_input), dim=1)
+        wh_hidden = torch.cat((xy_hidden, next_xy_decoder_input), dim=1)
         # raw_wh_gmm_param: batch x gmm_comp_num*gmm_param_num
         raw_wh_gmm_param = self.wh_out(wh_hidden)
         # wh: batch x 2
@@ -185,9 +184,9 @@ class DecoderRNN(BaseRNN):
     def forward(self, encoder_hidden=None, encoder_outputs=None, target_l_variables=None, 
         target_x_variables=None, target_y_variables=None, target_w_variables=None, 
         target_h_variables=None, is_training=0, early_stop_len=None):
-        ret_dict = dict()
+        ret_dict = {}
         if self.use_attention:
-            ret_dict[DecoderRNN.KEY_ATTN_SCORE] = list()
+            ret_dict[DecoderRNN.KEY_ATTN_SCORE] = []
 
         target_l_variables, batch_size, max_length = self._validate_args(target_l_variables, 
             encoder_hidden, encoder_outputs)
@@ -242,7 +241,7 @@ class DecoderRNN(BaseRNN):
                 next_h_decoder_input = target_h_variables[:,di+1]
 
                 step_l_output, decoder_hidden, step_attn, xy_gmm_param, wh_gmm_param, \
-                sampled_xy, sampled_wh = self.forward_step(l_decoder_input, x_decoder_input, 
+                    sampled_xy, sampled_wh = self.forward_step(l_decoder_input, x_decoder_input, 
                     y_decoder_input, w_decoder_input, h_decoder_input, decoder_hidden, 
                     encoder_outputs, next_l_decoder_input, next_x_decoder_input, 
                     next_y_decoder_input, is_training=is_training)
@@ -272,7 +271,7 @@ class DecoderRNN(BaseRNN):
 
             for di in range(early_stop_len):
                 step_l_output, decoder_hidden, step_attn, xy_gmm_param, wh_gmm_param, \
-                sampled_xy, sampled_wh = self.forward_step(l_decoder_input, x_decoder_input, 
+                    sampled_xy, sampled_wh = self.forward_step(l_decoder_input, x_decoder_input, 
                     y_decoder_input, w_decoder_input, h_decoder_input, decoder_hidden, 
                     encoder_outputs, is_training=is_training)
 
@@ -303,7 +302,7 @@ class DecoderRNN(BaseRNN):
         if encoder_hidden is None:
             return None
         if isinstance(encoder_hidden, tuple):
-            encoder_hidden = tuple([self._cat_directions(h) for h in encoder_hidden])
+            encoder_hidden = tuple(self._cat_directions(h) for h in encoder_hidden)
         else:
             encoder_hidden = self._cat_directions(encoder_hidden)
         return encoder_hidden
@@ -313,26 +312,25 @@ class DecoderRNN(BaseRNN):
             (#directions * #layers, #batch, hidden_size) -> (#layers, #batch, #directions * hidden_size)
         """
         if self.bidirectional_encoder:
-            h = torch.cat([h[0:h.size(0):2], h[1:h.size(0):2]], 2)
+            h = torch.cat([h[:h.size(0):2], h[1:h.size(0):2]], 2)
         return h
 
     def _validate_args(self, inputs, encoder_hidden, encoder_outputs):
-        if self.use_attention:
-            if encoder_outputs is None:
+        if encoder_outputs is None:
+            if self.use_attention:
                 raise ValueError("Argument encoder_outputs cannot be None when attention is used.")
 
         # inference batch size
         if inputs is None and encoder_hidden is None:
             batch_size = 1
-        else:
-            if inputs is not None:
-                batch_size = inputs.size(0)
-            else:
-                if self.rnn_cell is nn.LSTM:
-                    batch_size = encoder_hidden[0].size(1)
-                elif self.rnn_cell is nn.GRU:
-                    batch_size = encoder_hidden.size(1)
+        elif inputs is None:
+            if self.rnn_cell is nn.LSTM:
+                batch_size = encoder_hidden[0].size(1)
+            elif self.rnn_cell is nn.GRU:
+                batch_size = encoder_hidden.size(1)
 
+        else:
+            batch_size = inputs.size(0)
         # set default input and max decoding length
         if inputs is None:
             inputs = Variable(torch.LongTensor([self.sos_id] * batch_size),
@@ -386,13 +384,12 @@ class DecoderRNN(BaseRNN):
 
     def repackage_hidden(self, hidden):
         """Wraps hidden states in new Variables, to detach them from their history."""
-        if type(hidden) == Variable:
-            hidden = Variable(hidden.data)
-            if torch.cuda.is_available():
-                hidden = hidden.cuda()
-            return hidden
-        else:
+        if type(hidden) != Variable:
             return tuple(self.repackage_hidden(v) for v in hidden)
+        hidden = Variable(hidden.data)
+        if torch.cuda.is_available():
+            hidden = hidden.cuda()
+        return hidden
 			
 			
     def sample_bivariate_normal(self, u_x, u_y, sigma_x, sigma_y, rho_xy, 

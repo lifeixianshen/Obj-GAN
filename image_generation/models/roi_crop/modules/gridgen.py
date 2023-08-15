@@ -70,9 +70,10 @@ class AffineGridGenV2(Module):
         if input1.is_cuda:
             self.batchgrid = self.batchgrid.cuda()
 
-        output = torch.bmm(self.batchgrid.view(-1, self.height*self.width, 3), torch.transpose(input1, 1, 2)).view(-1, self.height, self.width, 2)
-
-        return output
+        return torch.bmm(
+            self.batchgrid.view(-1, self.height * self.width, 3),
+            torch.transpose(input1, 1, 2),
+        ).view(-1, self.height, self.width, 2)
 
 
 class CylinderGridGenV2(Module):
@@ -99,10 +100,7 @@ class CylinderGridGenV2(Module):
 
         output0 = self.batchgrid[:,:,:,0:1]
         output1 = torch.atan(torch.tan(np.pi/2.0*(self.batchgrid[:,:,:,1:2] + self.batchgrid[:,:,:,2:] * input_u[:,:,:,:])))  /(np.pi/2)
-        #print(output0.size(), output1.size())
-
-        output = torch.cat([output0, output1], 3)
-        return output
+        return torch.cat([output0, output1], 3)
 
 
 class DenseAffineGridGen(Module):
@@ -131,8 +129,7 @@ class DenseAffineGridGen(Module):
         x = torch.mul(self.batchgrid, input1[:,:,:,0:3])
         y = torch.mul(self.batchgrid, input1[:,:,:,3:6])
 
-        output = torch.cat([torch.sum(x,3),torch.sum(y,3)], 3)
-        return output
+        return torch.cat([torch.sum(x,3),torch.sum(y,3)], 3)
 
 
 
@@ -187,9 +184,7 @@ class DenseAffine3DGridGen(Module):
         phi = phi/np.pi
 
 
-        output = torch.cat([theta,phi], 3)
-
-        return output
+        return torch.cat([theta,phi], 3)
 
 
 
@@ -257,9 +252,7 @@ class DenseAffine3DGridGen_rotate(Module):
         output = torch.cat([theta,phi], 3)
 
         output1 = torch.atan(torch.tan(np.pi/2.0*(output[:,:,:,1:2] + self.batchgrid[:,:,:,2:] * input_u[:,:,:,:])))  /(np.pi/2)
-        output2 = torch.cat([output[:,:,:,0:1], output1], 3)
-
-        return output2
+        return torch.cat([output[:,:,:,0:1], output1], 3)
 
 
 class Depth3DGridGen(Module):
@@ -327,9 +320,7 @@ class Depth3DGridGen(Module):
         #print(output.size())
 
         output1 = torch.atan(torch.tan(np.pi/2.0*(output[:,:,:,1:2] + self.batchgrid[:,:,:,2:] * input_u[:,:,:,:])))  /(np.pi/2)
-        output2 = torch.cat([output[:,:,:,0:1], output1], 3)
-
-        return output2
+        return torch.cat([output[:,:,:,0:1], output1], 3)
 
 
 
@@ -410,5 +401,4 @@ class Depth3DGridGen_with_mask(Module):
 
         phi = phi/np.pi
 
-        output = torch.cat([theta,phi], 3)
-        return output
+        return torch.cat([theta,phi], 3)

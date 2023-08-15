@@ -82,7 +82,7 @@ class COCOeval:
         self._paramsEval = {}               # parameters for evaluation
         self.stats = []                     # result summarization
         self.ious = {}                      # ious between all gts and dts
-        if not cocoGt is None:
+        if cocoGt is not None:
             self.params.imgIds = sorted(cocoGt.getImgIds())
             self.params.catIds = sorted(cocoGt.getCatIds())
 
@@ -180,7 +180,7 @@ class COCOeval:
             return []
         dt = sorted(dt, key=lambda x: -x['score'])
         if len(dt) > p.maxDets[-1]:
-            dt=dt[0:p.maxDets[-1]]
+            dt = dt[:p.maxDets[-1]]
 
         if p.useSegm:
             g = [g['segmentation'] for g in gt]
@@ -191,8 +191,7 @@ class COCOeval:
 
         # compute iou between each dt and gt region
         iscrowd = [int(o['iscrowd']) for o in gt]
-        ious = mask.iou(d,g,iscrowd)
-        return ious
+        return mask.iou(d,g,iscrowd)
 
     def evaluateImg(self, imgId, catId, aRng, maxDet):
         '''
@@ -223,7 +222,7 @@ class COCOeval:
         gtind = [ind for (ind, g) in sorted(enumerate(gt), key=lambda ind_g: ind_g[1]['_ignore']) ]
 
         gt = [gt[ind] for ind in gtind]
-        dt = sorted(dt, key=lambda x: -x['score'])[0:maxDet]
+        dt = sorted(dt, key=lambda x: -x['score'])[:maxDet]
         iscrowd = [int(o['iscrowd']) for o in gt]
         # load computed ious
         N_iou = len(self.ious[imgId, catId])
@@ -236,7 +235,7 @@ class COCOeval:
         dtm  = np.zeros((T,D))
         gtIg = np.array([g['_ignore'] for g in gt])
         dtIg = np.zeros((T,D))
-        if not len(ious)==0:
+        if len(ious) != 0:
             for tind, t in enumerate(p.iouThrs):
                 for dind, d in enumerate(dt):
                     # information about best match so far (m=-1 -> unmatched)
@@ -310,7 +309,7 @@ class COCOeval:
         setI = set(_pe.imgIds)
         # get inds to evaluate
         k_list = [n for n, k in enumerate(p.catIds)  if k in setK]
-        m_list = [m for n, m in enumerate(p.maxDets) if m in setM]
+        m_list = [m for m in p.maxDets if m in setM]
         a_list = [n for n, a in enumerate(map(lambda x: tuple(x), p.areaRng)) if a in setA]
         i_list = [n for n, i in enumerate(p.imgIds)  if i in setI]
         # K0 = len(_pe.catIds)
@@ -326,7 +325,7 @@ class COCOeval:
                     E = filter(None, E)
                     if len(E) == 0:
                         continue
-                    dtScores = np.concatenate([e['dtScores'][0:maxDet] for e in E])
+                    dtScores = np.concatenate([e['dtScores'][:maxDet] for e in E])
 
                     # different sorting method generates slightly different results.
                     # mergesort is used to be consistent as Matlab implementation.
@@ -351,14 +350,11 @@ class COCOeval:
                         pr = tp / (fp+tp+np.spacing(1))
                         q  = np.zeros((R,))
 
-                        if nd:
-                            recall[t,k,a,m] = rc[-1]
-                        else:
-                            recall[t,k,a,m] = 0
-
+                        recall[t,k,a,m] = rc[-1] if nd else 0
                         # numpy is slow without cython optimization for accessing elements
                         # use python array gets significant speed improvement
-                        pr = pr.tolist(); q = q.tolist()
+                        pr = pr.tolist()
+                        q = q.tolist()
 
                         for i in range(nd-1, 0, -1):
                             if pr[i] > pr[i-1]:
@@ -410,10 +406,7 @@ class COCOeval:
                 # dimension of recall: [TxKxAxM]
                 s = self.eval['recall']
                 s = s[:,:,aind,mind]
-            if len(s[s>-1])==0:
-                mean_s = -1
-            else:
-                mean_s = np.mean(s[s>-1])
+            mean_s = -1 if len(s[s>-1])==0 else np.mean(s[s>-1])
             print(iStr.format(titleStr, typeStr, iouStr, areaStr, maxDetsStr, '%.3f'%(float(mean_s))))
             return mean_s
 

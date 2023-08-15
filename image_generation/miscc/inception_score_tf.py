@@ -41,9 +41,7 @@ def inception_forward(images, layer):
         for inp in inps:
             pred = fw_sess.run(layer, {'ExpandDims:0': [inp]})
             preds.append(pred)
-    preds = np.array(preds)
-        # preds = np.concatenate(preds, 0)
-    return preds
+    return np.array(preds)
 
 
 def get_mean_and_cov(images):
@@ -84,13 +82,11 @@ def get_inception_score(images, splits=10):
 
 
 def get_inception_pred(images):
-    preds = inception_forward(images, softmax)
-    return preds
+    return inception_forward(images, softmax)
 
 
 def get_fid_pred(images):
-    preds = inception_forward(images, last_layer)
-    return preds
+    return inception_forward(images, last_layer)
 
 def close_sess():
     fw_sess.close()

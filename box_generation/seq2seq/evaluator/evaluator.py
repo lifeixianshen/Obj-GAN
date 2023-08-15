@@ -54,20 +54,20 @@ class Evaluator(object):
         index2word = self.dev_cap_lang.index2word
 
         if self.output_opt == 1:
-            fout_bbox_label = open('%s/dev_bbox_test.txt'%(self.expt_dir), 'w')
+            fout_bbox_label = open(f'{self.expt_dir}/dev_bbox_test.txt', 'w')
         steps_per_epoch = int(round(len(data)/self.batch_size))
         for batch_index in range(steps_per_epoch): #steps_per_epoch
             if (batch_index+1) % self.display_step == 0:
                 print('%07d / %07d'%(batch_index, steps_per_epoch))
-                
+
             input_variables, input_lengths, target_l_variables, target_lengths, target_x_variables, target_y_variables, \
-                target_w_variables, target_h_variables = random_batch(self.batch_size, data, self.dev_cap_lang, 
+                    target_w_variables, target_h_variables = random_batch(self.batch_size, data, self.dev_cap_lang, 
                 self.dev_label_lang, self.x_mean_std, self.y_mean_std, self.w_mean_std, self.r_mean_std, 
                 is_training=0, select_index=batch_index)
 
             encoder_outputs, encoder_hidden = encoder(input_variables, input_lengths)
             decoder_outputs, xy_gmm_params, wh_gmm_params, decoder_hidden, other = \
-                decoder(encoder_hidden, encoder_outputs, target_l_variables, target_x_variables, 
+                    decoder(encoder_hidden, encoder_outputs, target_l_variables, target_x_variables, 
                     target_y_variables, target_w_variables, target_h_variables, is_training=0, 
                     early_stop_len=self.early_stop_len)
 
@@ -91,7 +91,7 @@ class Evaluator(object):
                 if not os.path.exists(key_sub_dir):
                     os.makedirs(key_sub_dir)
 
-                fout_filename = open('%s/boxes.txt'%(key_sub_dir), 'w')
+                fout_filename = open(f'{key_sub_dir}/boxes.txt', 'w')
 
             if len(ls) > 1:
                 xs = xs[:-1]
@@ -143,7 +143,7 @@ class Evaluator(object):
                     cap_seq = input_variables[0].tolist()
                     cap_seq = [index2word[word] for word in cap_seq]
 
-                    fout_bbox_label.write('%s - %s - '%(keys[batch_index], cap_seq))
+                    fout_bbox_label.write(f'{keys[batch_index]} - {cap_seq} - ')
                     for i in range(len(ls)):
                         fout_bbox_label.write('%.2f,%.2f,%.2f,%.2f,%s - '%(xs[i], ys[i], ws[i], hs[i], ls[i]))
                     fout_bbox_label.write('\n')

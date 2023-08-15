@@ -38,7 +38,9 @@ def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
     img_txt = Image.fromarray(convas)
     # get a font
     # fnt = None  # ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 50)
-    fnt = ImageFont.truetype(cfg.DATA_DIR + '/share/Pillow/Tests/fonts/FreeMono.ttf', 50)
+    fnt = ImageFont.truetype(
+        f'{cfg.DATA_DIR}/share/Pillow/Tests/fonts/FreeMono.ttf', 50
+    )
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
     sentence_list = []
@@ -64,11 +66,7 @@ def build_super_images(real_imgs, captions, ixtoword,
     real_imgs = real_imgs[:nvis]
     if lr_imgs is not None:
         lr_imgs = lr_imgs[:nvis]
-    if att_sze == 17:
-        vis_size = att_sze * 16
-    else:
-        vis_size = real_imgs.size(2)
-
+    vis_size = att_sze * 16 if att_sze == 17 else real_imgs.size(2)
     text_convas = \
         np.ones([batch_size * FONT_MAX,
                  (max_word_num + 2) * (vis_size + 2), 3],
@@ -122,10 +120,7 @@ def build_super_images(real_imgs, captions, ixtoword,
         num_attn = attn.shape[0]
         #
         img = real_imgs[i]
-        if lr_imgs is None:
-            lrI = img
-        else:
-            lrI = lr_imgs[i]
+        lrI = img if lr_imgs is None else lr_imgs[i]
         row = [lrI, middle_pad]
         row_merge = [img, middle_pad]
         row_beforeNorm = []
@@ -139,10 +134,8 @@ def build_super_images(real_imgs, captions, ixtoword,
             row_beforeNorm.append(one_map)
             minV = one_map.min()
             maxV = one_map.max()
-            if minVglobal > minV:
-                minVglobal = minV
-            if maxVglobal < maxV:
-                maxVglobal = maxV
+            minVglobal = min(minVglobal, minV)
+            maxVglobal = max(maxVglobal, maxV)
         for j in range(seq_len + 1):
             if j < num_attn:
                 one_map = row_beforeNorm[j]
@@ -174,12 +167,11 @@ def build_super_images(real_imgs, captions, ixtoword,
             break
         row = np.concatenate([txt, row, row_merge], 0)
         img_set.append(row)
-    if bUpdate:
-        img_set = np.concatenate(img_set, 0)
-        img_set = img_set.astype(np.uint8)
-        return img_set, sentences
-    else:
+    if not bUpdate:
         return None
+    img_set = np.concatenate(img_set, 0)
+    img_set = img_set.astype(np.uint8)
+    return img_set, sentences
 
 def build_super_shape_images(real_imgs, captions, ixtoword,
                        attn_maps, att_sze, lr_imgs=None,
@@ -190,11 +182,7 @@ def build_super_shape_images(real_imgs, captions, ixtoword,
     real_imgs = real_imgs[:nvis]
     if lr_imgs is not None:
         lr_imgs = lr_imgs[:nvis]
-    if att_sze == 17:
-        vis_size = att_sze * 16
-    else:
-        vis_size = real_imgs.size(2)
-
+    vis_size = att_sze * 16 if att_sze == 17 else real_imgs.size(2)
     text_convas = \
         np.ones([batch_size * font_max,
                  (max_word_num + 2) * (vis_size + 2), 3],
@@ -239,7 +227,7 @@ def build_super_shape_images(real_imgs, captions, ixtoword,
         attn = attn_maps[i].cpu().view(1, -1, att_sze, att_sze)
         # --> 1 x 1 x 17 x 17
         attn_max = attn.max(dim=1, keepdim=True)
-        
+
         attn = torch.cat([attn_max[0], attn], 1)
         #
         attn = attn.view(-1, 1, att_sze, att_sze)
@@ -249,10 +237,7 @@ def build_super_shape_images(real_imgs, captions, ixtoword,
         num_attn = attn.shape[0]
         #
         img = real_imgs[i]
-        if lr_imgs is None:
-            lrI = img
-        else:
-            lrI = lr_imgs[i]
+        lrI = img if lr_imgs is None else lr_imgs[i]
         row = [lrI, middle_pad]
         row_merge = [img, middle_pad]
         row_beforeNorm = []
@@ -298,12 +283,11 @@ def build_super_shape_images(real_imgs, captions, ixtoword,
             break
         row = np.concatenate([txt, row, row_merge], 0)
         img_set.append(row)
-    if bUpdate:
-        img_set = np.concatenate(img_set, 0)
-        img_set = img_set.astype(np.uint8)
-        return img_set, sentences
-    else:
+    if not bUpdate:
         return None
+    img_set = np.concatenate(img_set, 0)
+    img_set = img_set.astype(np.uint8)
+    return img_set, sentences
 
 ####################################################################
 def weights_init(m):
@@ -325,24 +309,21 @@ def load_params(model, new_param):
 
 
 def copy_G_params(model):
-    flatten = deepcopy(list(p.data for p in model.parameters()))
-    return flatten
+    return deepcopy([p.data for p in model.parameters()])
 
 
 def mkdir_p(path):
     try:
         os.makedirs(path)
     except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
+        if exc.errno != errno.EEXIST or not os.path.isdir(path):
             raise
 
 def path_leaf(path):
     return ntpath.basename(path)
 
 def is_non_zero_file(fpath):  
-    return True if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else False
+    return bool(os.path.isfile(fpath) and os.path.getsize(fpath) > 0)
 
 def calc_sort_size(boxes_arr, w_index=2, h_index=3):
     # boxes_arr (type = numpy array): boxes_num x 6 (x, y, w, h, l, crowd_l)
@@ -478,9 +459,8 @@ def feat_select(pooled_feat, raw_bt_c_codes, fm_rois, num_rois, is_large_scale=F
             if is_large_scale:
                 if max(width, height) < cfg.ROI.ROI_SIZE_THRS:
                     continue
-            else:
-                if max(width, height) >= cfg.ROI.ROI_SIZE_THRS:
-                    continue
+            elif max(width, height) >= cfg.ROI.ROI_SIZE_THRS:
+                continue
             real_indices.append(roi_index)
 
         real_num_rois = len(real_indices)
@@ -491,7 +471,7 @@ def feat_select(pooled_feat, raw_bt_c_codes, fm_rois, num_rois, is_large_scale=F
         classes.append(fm_rois[batch_index, real_indices, 4].astype(int))
         bt_c_codes.append(raw_bt_c_codes[batch_index, real_indices])
 
-    if len(classes) > 0:
+    if classes:
         x_code_rois = torch.cat(x_code_rois, dim=0)
         classes = torch.from_numpy(np.concatenate(classes))
         bt_c_codes = torch.cat(bt_c_codes, dim=0)
@@ -538,14 +518,13 @@ def form_hmaps(raw_masks, num_rois, rois, hmap_size, num_classes):
         cat_indices = rois[batch_index, :num_roi, 4].tolist()
         cat_indices = [int(cat_index) for cat_index in cat_indices]
 
-        count = 0
-        for cat_index in cat_indices:
+        for count, cat_index in enumerate(cat_indices):
             tmp_mask = re_raw_masks[batch_index, count]
             min_val = torch.min(tmp_mask)
             max_val = torch.max(tmp_mask)
             if min_val != max_val:
                 tmp_mask = (tmp_mask-min_val)/(max_val-min_val)
-            elif min_val == max_val and max_val < 0.6:
+            elif max_val < 0.6:
                 tmp_mask = tmp_mask*0
             re_raw_masks[batch_index, count] = tmp_mask
             tmp_mask = tmp_mask.unsqueeze(0)
@@ -555,15 +534,13 @@ def form_hmaps(raw_masks, num_rois, rois, hmap_size, num_classes):
             mask = torch.max(mask, dim=0)[0]
 
             raw_gen_hmap[batch_index, cat_index] = mask
-            count += 1
-
         for cat_index in cat_indices:
             mask = raw_gen_hmap[batch_index, cat_index]
             min_val = torch.min(mask)
             max_val = torch.max(mask)
             if min_val != max_val:
                 mask = (mask-min_val)/(max_val-min_val)
-            elif min_val == max_val and max_val < 0.6:
+            elif max_val < 0.6:
                 mask = mask*0
             raw_gen_hmap[batch_index, cat_index] = mask
 
@@ -574,7 +551,7 @@ def form_hmaps(raw_masks, num_rois, rois, hmap_size, num_classes):
 
         tmp_re_raw_masks = F.interpolate(re_raw_masks, size=(hmap_size[branch_index], 
             hmap_size[branch_index]), mode='bilinear', align_corners=True)
-        
+
         gen_hmaps.append(tmp_raw_gen_hmap)
         gen_bt_masks.append(tmp_re_raw_masks)
 
@@ -705,7 +682,7 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     if np.iscomplexobj(covmean):
         if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
             m = np.max(np.abs(covmean.imag))
-            raise ValueError('Imaginary component {}'.format(m))
+            raise ValueError(f'Imaginary component {m}')
         covmean = covmean.real
 
     tr_covmean = np.trace(covmean)

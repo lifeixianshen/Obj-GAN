@@ -47,9 +47,7 @@ class Lang:
                 self.word2count[word] = 0
 
     def reset_ext_word2count(self):
-        self.word2count = {}
-        for word in self.word2index:
-            self.word2count[word] = 0
+        self.word2count = {word: 0 for word in self.word2index}
 
     def copy_dict(self, lang):
         self.word2index = lang.word2index
@@ -98,27 +96,26 @@ def read_langs(filename):
 
     # Split every line into tuples and normalize captions
     tuples, xs, ys, ws, hs = [], [], [], [], []
-    line_num = 0
-    for line in lines:
+    for line_num, line in enumerate(lines):
         if line_num % 50000 == 0:
-            print('loading {}/{}'.format(line_num, len(lines)))
+            print(f'loading {line_num}/{len(lines)}')
         str_cap, str_x, str_y, str_w, str_h, str_label = line.split('\t')
         str_cap = normalize_string(str_cap)
         tuples.append([str_cap, str_x, str_y, str_w, str_h, str_label])
-        line_num += 1
-
     cap_lang = Lang('caption')
     label_lang = Lang('label')
 
     return cap_lang, label_lang, tuples
 
 def filter_tuples(tuples, max_len, min_len):
-    filtered_tuples = []
-    for item in tuples:
-        if len(item[0]) >= min_len and len(item[0]) <= max_len \
-            and len(item[5]) >= min_len and len(item[5]) <= max_len:
-                filtered_tuples.append(item)
-    return filtered_tuples
+    return [
+        item
+        for item in tuples
+        if len(item[0]) >= min_len
+        and len(item[0]) <= max_len
+        and len(item[5]) >= min_len
+        and len(item[5]) <= max_len
+    ]
 
 def read_mean_std(filename):
     lines = open(filename).read().strip().split('\n')
@@ -207,10 +204,7 @@ def get_class_sta(train_path, gaussian_dict_path):
             count = label_counts[label_index]
             if label not in sta_dict:
                 sta_dict[label] = []
-                sta_dict[label].append(count)
-            else:
-                sta_dict[label].append(count)
-
+            sta_dict[label].append(count)
     for label in sta_dict:
         tmp_mean = np.mean(np.array(sta_dict[label]))
         tmp_std = np.std(np.array(sta_dict[label]))
@@ -219,14 +213,8 @@ def get_class_sta(train_path, gaussian_dict_path):
 
 # Return a list of indexes, one for each word in the sentence, plus EOS
 def indexes_from_sentence(lang, sentence):
-    if "<sos>" in lang.word2index:
-        seq = [lang.word2index["<sos>"]]
-    else:
-        seq = []
-    if type(sentence) is list:
-        words = sentence
-    else:
-        words = sentence.split(' ')
+    seq = [lang.word2index["<sos>"]] if "<sos>" in lang.word2index else []
+    words = sentence if type(sentence) is list else sentence.split(' ')
     for word in words:
         if word in lang.word2index:
             seq.append(lang.word2index[word])
@@ -239,7 +227,7 @@ def nums_from_sentence(mean, std, sentence):
 
 # Pad a with the PAD symbol
 def pad_seq(seq, max_length, pad_token):
-    seq += [pad_token for i in range(max_length - len(seq))]
+    seq += [pad_token for _ in range(max_length - len(seq))]
     return seq
 
 def random_batch(batch_size, tuples, cap_lang, label_lang, x_mean_std, 
@@ -247,7 +235,7 @@ def random_batch(batch_size, tuples, cap_lang, label_lang, x_mean_std,
     cap_seqs, label_seqs, x_seqs, y_seqs, w_seqs, r_seqs = [], [], [], [], [], []
     if is_training:
         # Choose random tuples
-        for i in range(batch_size):
+        for _ in range(batch_size):
             item = random.choice(tuples)
             cap_seqs.append(indexes_from_sentence(cap_lang, item[0]))
             label_seqs.append(indexes_from_sentence(label_lang, item[5]))
@@ -288,5 +276,5 @@ def random_batch(batch_size, tuples, cap_lang, label_lang, x_mean_std,
     y_var = Variable(torch.FloatTensor(y_padded)).cuda()
     w_var = Variable(torch.FloatTensor(w_padded)).cuda()
     r_var = Variable(torch.FloatTensor(r_padded)).cuda()
-        
+
     return cap_var, cap_lengths, label_var, label_lengths, x_var, y_var, w_var, r_var

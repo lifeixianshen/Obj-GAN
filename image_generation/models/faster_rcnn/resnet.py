@@ -137,12 +137,9 @@ class ResNet(nn.Module):
         nn.BatchNorm2d(planes * block.expansion),
       )
 
-    layers = []
-    layers.append(block(self.inplanes, planes, stride, downsample))
+    layers = [block(self.inplanes, planes, stride, downsample)]
     self.inplanes = planes * block.expansion
-    for i in range(1, blocks):
-      layers.append(block(self.inplanes, planes))
-
+    layers.extend(block(self.inplanes, planes) for _ in range(1, blocks))
     return nn.Sequential(*layers)
 
   def forward(self, x):
@@ -230,7 +227,7 @@ class resnet(_fasterRCNN):
     resnet = resnet101()
 
     if self.pretrained == True:
-      print("Loading pretrained weights from %s" %(self.model_path))
+      print(f"Loading pretrained weights from {self.model_path}")
       state_dict = torch.load(self.model_path)
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
@@ -284,5 +281,4 @@ class resnet(_fasterRCNN):
       self.RCNN_top.apply(set_bn_eval)
 
   def _head_to_tail(self, pool5):
-    fc7 = self.RCNN_top(pool5).mean(3).mean(2)
-    return fc7
+    return self.RCNN_top(pool5).mean(3).mean(2)

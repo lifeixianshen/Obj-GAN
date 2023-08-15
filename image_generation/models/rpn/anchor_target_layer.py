@@ -168,12 +168,9 @@ class _AnchorTargetLayer(nn.Module):
         bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, batch_size, fill=0)
         bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, batch_size, fill=0)
 
-        outputs = []
-
         labels = labels.view(batch_size, height, width, A).permute(0,3,1,2).contiguous()
         labels = labels.view(batch_size, 1, A * height, width)
-        outputs.append(labels)
-
+        outputs = [labels]
         bbox_targets = bbox_targets.view(batch_size, height, width, A*4).permute(0,3,1,2).contiguous()
         outputs.append(bbox_targets)
 
@@ -181,13 +178,13 @@ class _AnchorTargetLayer(nn.Module):
         bbox_inside_weights = bbox_inside_weights.view(batch_size,anchors_count,1).expand(batch_size, anchors_count, 4)
 
         bbox_inside_weights = bbox_inside_weights.contiguous().view(batch_size, height, width, 4*A)\
-                            .permute(0,3,1,2).contiguous()
+                                .permute(0,3,1,2).contiguous()
 
         outputs.append(bbox_inside_weights)
 
         bbox_outside_weights = bbox_outside_weights.view(batch_size,anchors_count,1).expand(batch_size, anchors_count, 4)
         bbox_outside_weights = bbox_outside_weights.contiguous().view(batch_size, height, width, 4*A)\
-                            .permute(0,3,1,2).contiguous()
+                                .permute(0,3,1,2).contiguous()
         outputs.append(bbox_outside_weights)
 
         return outputs

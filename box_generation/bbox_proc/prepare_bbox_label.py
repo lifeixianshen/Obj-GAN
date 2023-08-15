@@ -19,15 +19,13 @@ def path_leaf(path):
 	return ntpath.basename(path)
 
 def calc_sort_size(boxes_arr):
-	# boxes_arr (type = numpy array): boxes_num x 6 (x, y, w, h, l, crowd_l)
-	# calculate the product of width and height
-	sizes = np.multiply(boxes_arr[:, w_index], boxes_arr[:, h_index])
+    # boxes_arr (type = numpy array): boxes_num x 6 (x, y, w, h, l, crowd_l)
+    # calculate the product of width and height
+    sizes = np.multiply(boxes_arr[:, w_index], boxes_arr[:, h_index])
 
-	# sort sizes in the ascending order
-	sorted_indices = np.argsort(sizes)[::-1].tolist()
-	sorted_boxes_arr = boxes_arr[sorted_indices,:]
-
-	return sorted_boxes_arr
+    # sort sizes in the ascending order
+    sorted_indices = np.argsort(sizes)[::-1].tolist()
+    return boxes_arr[sorted_indices,:]
 
 def reorg_boxes_arr(boxes_arr):
 	# new_boxes_arr (type = numpy array): boxes_num x 6 (centern_x, center_y, w, h/w, l, crowd_l)

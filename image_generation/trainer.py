@@ -81,7 +81,7 @@ class condGANTrainer(object):
         image_encoder = CNN_ENCODER(cfg.TEXT.EMBEDDING_DIM)
         img_encoder_path = cfg.TRAIN.NET_E.replace('text_encoder', 'image_encoder')
         state_dict = \
-            torch.load(img_encoder_path, map_location=lambda storage, loc: storage)
+                torch.load(img_encoder_path, map_location=lambda storage, loc: storage)
         image_encoder.load_state_dict(state_dict)
         for p in image_encoder.parameters():
             p.requires_grad = False
@@ -89,9 +89,9 @@ class condGANTrainer(object):
         image_encoder.eval()
 
         text_encoder = \
-            RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
+                RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
         state_dict = \
-            torch.load(cfg.TRAIN.NET_E,
+                torch.load(cfg.TRAIN.NET_E,
                        map_location=lambda storage, loc: storage)
         text_encoder.load_state_dict(state_dict)
         for p in text_encoder.parameters():
@@ -154,7 +154,7 @@ class condGANTrainer(object):
         epoch = 0
         if cfg.TRAIN.NET_G != '':
             state_dict = \
-                torch.load(cfg.TRAIN.NET_G, map_location=lambda storage, loc: storage)
+                    torch.load(cfg.TRAIN.NET_G, map_location=lambda storage, loc: storage)
             netG.load_state_dict(state_dict)
             print('Load G from: ', cfg.TRAIN.NET_G)
             istart = cfg.TRAIN.NET_G.rfind('_') + 1
@@ -169,27 +169,27 @@ class condGANTrainer(object):
                 Dname = '%s/netPatD%d.pth' % (s_tmp, i)
                 print('Load PatD from: ', Dname)
                 state_dict = \
-                    torch.load(Dname, map_location=lambda storage, loc: storage)
+                        torch.load(Dname, map_location=lambda storage, loc: storage)
                 netsPatD[i].load_state_dict(state_dict)
 
                 Dname = '%s/netShpD%d.pth' % (s_tmp, i)
                 print('Load ShpD from: ', Dname)
                 state_dict = \
-                    torch.load(Dname, map_location=lambda storage, loc: storage)
+                        torch.load(Dname, map_location=lambda storage, loc: storage)
                 netsShpD[i].load_state_dict(state_dict)
 
             s_tmp = Gname[:Gname.rfind('/')]
-            Dname = '%s/netObjSSD.pth' % (s_tmp)
+            Dname = f'{s_tmp}/netObjSSD.pth'
             print('Load ObjSSD from: ', Dname)
             state_dict = \
-                torch.load(Dname, map_location=lambda storage, loc: storage)
+                    torch.load(Dname, map_location=lambda storage, loc: storage)
             netObjSSD.load_state_dict(state_dict)
 
             s_tmp = Gname[:Gname.rfind('/')]
-            Dname = '%s/netObjLSD.pth' % (s_tmp)
+            Dname = f'{s_tmp}/netObjLSD.pth'
             print('Load ObjLSD from: ', Dname)
             state_dict = \
-                torch.load(Dname, map_location=lambda storage, loc: storage)
+                    torch.load(Dname, map_location=lambda storage, loc: storage)
             netObjLSD.load_state_dict(state_dict)
 
         return [text_encoder, image_encoder, netG, netsPatD, netsShpD, netObjSSD, netObjLSD, epoch]
@@ -265,11 +265,9 @@ class condGANTrainer(object):
             torch.save(netShpD.state_dict(),
                 '%s/netShpD%d.pth' % (self.model_dir, i))
 
-        torch.save(netObjSSD.state_dict(),
-            '%s/netObjSSD.pth' % (self.model_dir))
+        torch.save(netObjSSD.state_dict(), f'{self.model_dir}/netObjSSD.pth')
 
-        torch.save(netObjLSD.state_dict(),
-            '%s/netObjLSD.pth' % (self.model_dir))
+        torch.save(netObjLSD.state_dict(), f'{self.model_dir}/netObjLSD.pth')
         print('Save G/Ds models.')
 
     def save_img_results(self, netG, noise, sent_emb, words_embs, glove_words_embs, 

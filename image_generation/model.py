@@ -41,12 +41,12 @@ def conv3x3(in_planes, out_planes):
 
 # Upsale the spatial size by a factor of 2
 def upBlock(in_planes, out_planes, norm=nn.BatchNorm2d):
-    block = nn.Sequential(
+    return nn.Sequential(
         nn.Upsample(scale_factor=2, mode='nearest'),
         conv3x3(in_planes, out_planes * 2),
         norm(out_planes * 2),
-        GLU())
-    return block
+        GLU(),
+    )
 
 
 def downBlock_G(in_planes, out_planes, kernel_size=3, stride=2, padding=1, norm=None):
@@ -55,9 +55,7 @@ def downBlock_G(in_planes, out_planes, kernel_size=3, stride=2, padding=1, norm=
     if norm is not None:
         sequence += [norm(out_planes)]
     sequence += [nn.LeakyReLU(0.2, inplace=True)]
-    block = nn.Sequential(*sequence)
-        
-    return block
+    return nn.Sequential(*sequence)
 
 
 class HmapResBlock(nn.Module):
@@ -93,10 +91,7 @@ class RNN_ENCODER(nn.Module):
         self.nlayers = nlayers  # Number of recurrent layers
         self.bidirectional = bidirectional
         self.rnn_type = cfg.RNN_TYPE
-        if bidirectional:
-            self.num_directions = 2
-        else:
-            self.num_directions = 1
+        self.num_directions = 2 if bidirectional else 1
         # number of features in the hidden state
         self.nhidden = nhidden // self.num_directions
 
@@ -182,11 +177,7 @@ class RNN_ENCODER(nn.Module):
 class CNN_ENCODER(nn.Module):
     def __init__(self, nef):
         super(CNN_ENCODER, self).__init__()
-        if cfg.TRAIN.FLAG:
-            self.nef = nef
-        else:
-            self.nef = 256  # define a uniform ranker
-
+        self.nef = nef if cfg.TRAIN.FLAG else 256
         model = models.inception_v3()
         model_path = cfg.TRAIN.NET_E.replace('text_encoder100.pth', 'inception_v3_google-1a9a5a14.pth')
         state_dict = torch.load(model_path, map_location=lambda storage, loc: storage)
@@ -527,9 +518,7 @@ class INIT_STAGE_G_MAIN(nn.Module):
         self.define_module()
 
     def _make_layer(self, block, channel_num):
-        layers = []
-        for i in range(cfg.GAN.GLB_R_NUM):
-            layers.append(block(channel_num))
+        layers = [block(channel_num) for _ in range(cfg.GAN.GLB_R_NUM)]
         return nn.Sequential(*layers)
 
     def define_module(self):
@@ -626,9 +615,7 @@ class NEXT_STAGE_G_MAIN(nn.Module):
         self.define_module()
 
     def _make_layer(self, block, channel_num):
-        layers = []
-        for i in range(cfg.GAN.LOCAL_R_NUM):
-            layers.append(block(channel_num))
+        layers = [block(channel_num) for _ in range(cfg.GAN.LOCAL_R_NUM)]
         return nn.Sequential(*layers)
 
     def define_module(self):
@@ -715,8 +702,7 @@ class GET_IMAGE_G(nn.Module):
         )
 
     def forward(self, h_code):
-        out_img = self.img(h_code)
-        return out_img
+        return self.img(h_code)
 
 
 class G_NET(nn.Module):
@@ -798,21 +784,25 @@ class G_NET(nn.Module):
 # ############## Shape G networks ##########################
 # Downsale the spatial size by a factor of 2
 def downBlock_3x3(in_planes, out_planes):
-    block = nn.Sequential(
-        nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=2, padding=1, bias=False),
+    return nn.Sequential(
+        nn.Conv2d(
+            in_planes,
+            out_planes,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=False,
+        ),
         nn.InstanceNorm2d(out_planes),
-        nn.LeakyReLU(0.2, inplace=True)
+        nn.LeakyReLU(0.2, inplace=True),
     )
-    return block
 
 
 # Keep the spatial size
 def Block3x3_relu(in_planes, out_planes, norm=nn.BatchNorm2d):
-    block = nn.Sequential(
-        conv3x3(in_planes, out_planes * 2),
-        norm(out_planes * 2),
-        GLU())
-    return block
+    return nn.Sequential(
+        conv3x3(in_planes, out_planes * 2), norm(out_planes * 2), GLU()
+    )
 
 
 class CLSTMCell(nn.Module):
@@ -891,8 +881,7 @@ class GET_SHAPE_G(nn.Module):
         )
 
     def forward(self, h_code):
-        out_img = self.img(h_code)
-        return out_img
+        return self.img(h_code)
 
 
 class SHP_G_NET(nn.Module):
@@ -912,9 +901,10 @@ class SHP_G_NET(nn.Module):
         self.img_net = GET_SHAPE_G(self.nbf)
         
     def _make_layer(self, block, channel_num):
-        layers = []
-        for i in range(cfg.GAN.R_NUM):
-            layers.append(block(channel_num, norm=nn.InstanceNorm2d))
+        layers = [
+            block(channel_num, norm=nn.InstanceNorm2d)
+            for _ in range(cfg.GAN.R_NUM)
+        ]
         return nn.Sequential(*layers) 
 
     def forward(self, z_code, bbox_maps_fwd, bbox_maps_bwd, bbox_fmaps):
@@ -956,10 +946,17 @@ class SHP_G_NET(nn.Module):
             state_bwd = self.bwd_convlstm(h_code_bwd[:,t], state_bwd)
             state_bwd_lst.append(state_bwd[0].unsqueeze(1))
 
-        # 3. concatenate noise
-        h_code = []
-        for t in range(0, max_num_roi):
-            h_code.append(torch.cat((state_fwd_lst[t], state_bwd_lst[max_num_roi-t-1], z_code[:,t:t+1]), 2))
+        h_code = [
+            torch.cat(
+                (
+                    state_fwd_lst[t],
+                    state_bwd_lst[max_num_roi - t - 1],
+                    z_code[:, t : t + 1],
+                ),
+                2,
+            )
+            for t in range(0, max_num_roi)
+        ]
         h_code = torch.cat(h_code, 1)
         h_code = h_code.view(batch_size*max_num_roi, -1, self.fm_size, self.fm_size)
 
@@ -987,12 +984,11 @@ class SHP_G_NET(nn.Module):
 
 # ############## D networks ##########################
 def Block3x3_leakRelu(in_planes, out_planes):
-    block = nn.Sequential(
+    return nn.Sequential(
         conv3x3(in_planes, out_planes),
         nn.BatchNorm2d(out_planes),
-        nn.LeakyReLU(0.2, inplace=True)
+        nn.LeakyReLU(0.2, inplace=True),
     )
-    return block
 
 
 # Downsale the spatial size by a factor of 16
@@ -1012,9 +1008,7 @@ def encode_image_by_ntimes(ngf, ndf, n_layer):
             nn.LeakyReLU(0.2, inplace=True)
         ]
 
-    encode_img = nn.Sequential(*sequence)
-
-    return encode_img
+    return nn.Sequential(*sequence)
 
 
 class D_GET_LOGITS(nn.Module):
@@ -1044,8 +1038,7 @@ class D_GET_LOGITS(nn.Module):
         else:
             h_c_code = h_code
 
-        output = self.outlogits(h_c_code)
-        return output
+        return self.outlogits(h_c_code)
 
 # ############## Patch discriminators ##########################
 
@@ -1057,15 +1050,11 @@ class PAT_D_NET64(nn.Module):
         nef = cfg.TEXT.EMBEDDING_DIM
         ngf = cfg.GAN.GF_DIM // 4
         self.img_code = encode_image_by_ntimes(0, ndf, cfg.GAN.LAYER_D_NUM)
-        if b_jcu:
-            self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False)
-        else:
-            self.UNCOND_DNET = None
+        self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False) if b_jcu else None
         self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
-        x_code4 = self.img_code(x_var)  # 4 x 4 x 8df (cfg.GAN.LAYER_D_NUM=4)
-        return x_code4
+        return self.img_code(x_var)
 
 
 # For 128 x 128 images
@@ -1076,15 +1065,11 @@ class PAT_D_NET128(nn.Module):
         nef = cfg.TEXT.EMBEDDING_DIM
         ngf = cfg.GAN.GF_DIM // 4
         self.img_code = encode_image_by_ntimes(0, ndf, cfg.GAN.LAYER_D_NUM)
-        if b_jcu:
-            self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False)
-        else:
-            self.UNCOND_DNET = None
+        self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False) if b_jcu else None
         self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
-        x_code8 = self.img_code(x_var)  # 8 x 8 x 8df (cfg.GAN.LAYER_D_NUM=4)
-        return x_code8
+        return self.img_code(x_var)
 
 
 # For 256 x 256 images
@@ -1095,15 +1080,11 @@ class PAT_D_NET256(nn.Module):
         nef = cfg.TEXT.EMBEDDING_DIM
         ngf = cfg.GAN.GF_DIM // 4
         self.img_code = encode_image_by_ntimes(0, ndf, cfg.GAN.LAYER_D_NUM)
-        if b_jcu:
-            self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False)
-        else:
-            self.UNCOND_DNET = None
+        self.UNCOND_DNET = D_GET_LOGITS(ndf, nef, bcondition=False) if b_jcu else None
         self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
-        x_code16 = self.img_code(x_var)  # 16 x 16 x 8df (cfg.GAN.LAYER_D_NUM=4)
-        return x_code16
+        return self.img_code(x_var)
 
 # ############## Shape discriminators ##########################
 
@@ -1126,9 +1107,7 @@ class SHP_D_NET64(nn.Module):
     def forward(self, x_var, s_var):
         new_s_var = self.shp_code(s_var)
         x_s_var = torch.cat([x_var, new_s_var], dim=1)
-        # 64//cfg.GAN.LAYER_D_NUM x 64//cfg.GAN.LAYER_D_NUM x 2^(cfg.GAN.LAYER_D_NUM-1)
-        x_code4 = self.img_code(x_s_var)
-        return x_code4
+        return self.img_code(x_s_var)
 
 
 # For 128 x 128 images
@@ -1150,9 +1129,7 @@ class SHP_D_NET128(nn.Module):
     def forward(self, x_var, s_var):
         new_s_var = self.shp_code(s_var)
         x_s_var = torch.cat([x_var, new_s_var], dim=1)
-        # 128//cfg.GAN.LAYER_D_NUM x 128//cfg.GAN.LAYER_D_NUM x 2^(cfg.GAN.LAYER_D_NUM-1)
-        x_code8 = self.img_code(x_s_var)
-        return x_code8
+        return self.img_code(x_s_var)
 
 
 # For 256 x 256 images
@@ -1174,9 +1151,7 @@ class SHP_D_NET256(nn.Module):
     def forward(self, x_var, s_var):
         new_s_var = self.shp_code(s_var)
         x_s_var = torch.cat([x_var, new_s_var], dim=1)
-        # 256//cfg.GAN.LAYER_D_NUM x 256//cfg.GAN.LAYER_D_NUM x 2^(cfg.GAN.LAYER_D_NUM-1)
-        x_code16 = self.img_code(x_s_var)
-        return x_code16
+        return self.img_code(x_s_var)
 
 
 # ############## Object discriminators ##########################

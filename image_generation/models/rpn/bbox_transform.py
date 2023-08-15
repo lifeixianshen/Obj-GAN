@@ -28,10 +28,7 @@ def bbox_transform(ex_rois, gt_rois):
     targets_dw = torch.log(gt_widths / ex_widths)
     targets_dh = torch.log(gt_heights / ex_heights)
 
-    targets = torch.stack(
-        (targets_dx, targets_dy, targets_dw, targets_dh),1)
-
-    return targets
+    return torch.stack((targets_dx, targets_dy, targets_dw, targets_dh), 1)
 
 def bbox_transform_batch(ex_rois, gt_rois):
 
@@ -69,10 +66,7 @@ def bbox_transform_batch(ex_rois, gt_rois):
     else:
         raise ValueError('ex_roi input dimension is not correct.')
 
-    targets = torch.stack(
-        (targets_dx, targets_dy, targets_dw, targets_dh),2)
-
-    return targets
+    return torch.stack((targets_dx, targets_dy, targets_dw, targets_dh), 2)
 
 def bbox_transform_inv(boxes, deltas, batch_size):
     widths = boxes[:, :, 2] - boxes[:, :, 0] + 1.0
@@ -161,9 +155,7 @@ def bbox_overlaps(anchors, gt_boxes):
     ih[ih < 0] = 0
 
     ua = anchors_area + gt_boxes_area - (iw * ih)
-    overlaps = iw * ih / ua
-
-    return overlaps
+    return iw * ih / ua
 
 def bbox_overlaps_batch(anchors, gt_boxes):
     """

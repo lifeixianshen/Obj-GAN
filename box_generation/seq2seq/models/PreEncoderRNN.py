@@ -13,10 +13,7 @@ class PreEncoderRNN(nn.Module):
         self.nlayers = nlayers  # Number of recurrent layers
         self.bidirectional = bidirectional
         self.rnn_type = 'LSTM'
-        if bidirectional:
-            self.num_directions = 2
-        else:
-            self.num_directions = 1
+        self.num_directions = 2 if bidirectional else 1
         # number of features in the hidden state
         self.nhidden = nhidden // self.num_directions
 

@@ -10,11 +10,11 @@ import os
 import errno
 
 checkpoint = '2018_10_23_14_55_12'
-gen_dir = '../data/coco/gen_masks_%s/*'%(checkpoint)
+gen_dir = f'../data/coco/gen_masks_{checkpoint}/*'
 gt_dir = '../data/coco/masks/'
 img_dir = '../data/coco/images/'
 txt_dir = '../data/coco/text/'
-output_dir = '../vis_bboxes_%s/'%(checkpoint)
+output_dir = f'../vis_bboxes_{checkpoint}/'
 CAPS_PER_IMG = 5
 FONT_MAX = 40
 FONT_REAL = 30
@@ -77,16 +77,14 @@ def draw_plate(bboxes):
 	return bbox_plate
 
 def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
+	try:
+		os.makedirs(path)
+	except OSError as exc:  # Python >2.5
+		if exc.errno != errno.EEXIST or not os.path.isdir(path):
+			raise
 
 def is_non_zero_file(fpath):  
-    return True if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else False
+	return bool(os.path.isfile(fpath) and os.path.getsize(fpath) > 0)
 
 mkdir_p(output_dir)
 
@@ -99,7 +97,7 @@ for key in keys:
 		break
 
 	# 1. load image
-	img_path = '%s%s.jpg'%(img_dir, key)
+	img_path = f'{img_dir}{key}.jpg'
 	img = np.array(Image.open(img_path))
 	img_height, img_width = img.shape[0], img.shape[1]
 	height_scale = STD_IMG_SIZE/float(img_height)
@@ -108,11 +106,11 @@ for key in keys:
 	img = Image.fromarray((img*255).astype(np.uint8))
 
 	# 2. load captions
-	cap_path = '%s%s.txt'%(txt_dir, key)
+	cap_path = f'{txt_dir}{key}.txt'
 	captions = load_captions(cap_path)
 
 	# 3. load gt bboxes
-	gt_bbox_path = '%s%s/boxes.txt'%(gt_dir, key)
+	gt_bbox_path = f'{gt_dir}{key}/boxes.txt'
 	if is_non_zero_file(gt_bbox_path):
 		gt_boxes = pd.read_csv(gt_bbox_path, header=None).astype(int)
 		gt_boxes = np.array(gt_boxes)
@@ -122,13 +120,13 @@ for key in keys:
 		gt_boxes = None
 
 	# 4. load gen bboxes
-	gen_bbox_paths = glob('%s%s/*'%(gen_dir, key))
+	gen_bbox_paths = glob(f'{gen_dir}{key}/*')
 	gen_bbox_paths_indices = [int(path_leaf(gen_bbox_path)) for gen_bbox_path in gen_bbox_paths]
 	gen_bbox_paths_indices = np.argsort(gen_bbox_paths_indices)
 	gen_bbox_paths = [gen_bbox_paths[index] for index in gen_bbox_paths_indices]
 	gen_boxes_set = []
 	for gen_bbox_path in gen_bbox_paths:
-		sub_gen_bbox_path = '%s/boxes.txt'%(gen_bbox_path)
+		sub_gen_bbox_path = f'{gen_bbox_path}/boxes.txt'
 		if is_non_zero_file(sub_gen_bbox_path):
 			gen_boxes = pd.read_csv(sub_gen_bbox_path, header=None).astype(int)
 			gen_boxes = np.array(gen_boxes)
@@ -149,7 +147,7 @@ for key in keys:
 	# 6. draw images
 	starting_y = CAPS_PER_IMG * FONT_MAX
 	starting_x = VIS_SIZE+OFFSET
-	
+
 	img_plate.paste(img, (0, starting_y))
 
 	# 7. draw gt boxes
@@ -162,4 +160,4 @@ for key in keys:
 		gen_bbox_plate = draw_plate(gen_boxes)
 		img_plate.paste(gen_bbox_plate, (starting_x*(i+2), starting_y))
 
-	img_plate.save('%s%s.jpg'%(output_dir, key))
+	img_plate.save(f'{output_dir}{key}.jpg')

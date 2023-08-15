@@ -28,9 +28,9 @@ class vgg16(_fasterRCNN):
   def _init_modules(self):
     vgg = models.vgg16()
     if self.pretrained:
-        print("Loading pretrained weights from %s" %(self.model_path))
-        state_dict = torch.load(self.model_path)
-        vgg.load_state_dict({k:v for k,v in state_dict.items() if k in vgg.state_dict()})
+      print(f"Loading pretrained weights from {self.model_path}")
+      state_dict = torch.load(self.model_path)
+      vgg.load_state_dict({k:v for k,v in state_dict.items() if k in vgg.state_dict()})
 
     vgg.classifier = nn.Sequential(*list(vgg.classifier._modules.values())[:-1])
 
@@ -56,7 +56,5 @@ class vgg16(_fasterRCNN):
   def _head_to_tail(self, pool5):
     
     pool5_flat = pool5.view(pool5.size(0), -1)
-    fc7 = self.RCNN_top(pool5_flat)
-
-    return fc7
+    return self.RCNN_top(pool5_flat)
 

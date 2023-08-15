@@ -39,31 +39,20 @@ def build_dictionary(train_captions, test_captions):
 
     vocab = [w for w in word_counts if word_counts[w] >= 0]
 
-    ixtoword = {}
-    ixtoword[0] = '<end>'
-    wordtoix = {}
-    wordtoix['<end>'] = 0
-    ix = 1
-    for w in vocab:
+    ixtoword = {0: '<end>'}
+    wordtoix = {'<end>': 0}
+    for ix, w in enumerate(vocab, start=1):
         wordtoix[w] = ix
         ixtoword[ix] = w
-        ix += 1
-
     train_captions_new = []
     for t in train_captions:
-        rev = []
-        for w in t:
-            if w in wordtoix:
-                rev.append(wordtoix[w])
+        rev = [wordtoix[w] for w in t if w in wordtoix]
         # rev.append(0)  # do not need '<end>' token
         train_captions_new.append(rev)
 
     test_captions_new = []
     for t in test_captions:
-        rev = []
-        for w in t:
-            if w in wordtoix:
-                rev.append(wordtoix[w])
+        rev = [wordtoix[w] for w in t if w in wordtoix]
         # rev.append(0)  # do not need '<end>' token
         test_captions_new.append(rev)
 
@@ -76,7 +65,7 @@ def write_imgs(data_dir, filenames, filepath):
             if img_index % 500 == 0:
                 print('%07d / %07d'%(img_index, len(filenames)))
 
-            img_name = '%s/images/%s.jpg' % (data_dir, filenames[img_index])
+            img_name = f'{data_dir}/images/{filenames[img_index]}.jpg'
             with open(img_name, 'rb') as img_fid:
                 img_bytes = img_fid.read()
 
@@ -88,7 +77,7 @@ def read_imgs(data_dir, filenames, filepath):
     img_bytes = []
     print('start loading bigfile (%0.02f GB) into memory' % (os.path.getsize(filepath)/1024/1024/1024))
     with open(filepath, 'rb') as fid:
-        for img_index in range(len(filenames)):
+        for _ in range(len(filenames)):
             img_bytes_len = struct.unpack('i', fid.read(4))[0]
             img_bytes.append(fid.read(img_bytes_len))
 
@@ -97,10 +86,7 @@ def read_imgs(data_dir, filenames, filepath):
 def translate_glove(captions, wordtoix):
     captions_new = []
     for t in captions:
-        rev = []
-        for w in t:
-            if w in wordtoix:
-                rev.append(wordtoix[w])
+        rev = [wordtoix[w] for w in t if w in wordtoix]
         # rev.append(0)  # do not need '<end>' token
         captions_new.append(rev)
     return captions_new
@@ -248,7 +234,7 @@ def load_text_data(data_dir, split, train_names, test_names):
 def load_captions(data_dir, filenames, embeddings_num):
     all_captions = []
     for i in range(len(filenames)):
-        cap_path = '%s/text/%s.txt' % (data_dir, filenames[i])
+        cap_path = f'{data_dir}/text/{filenames[i]}.txt'
         with open(cap_path, "r") as f:
             captions = f.read().split('\n')
             cnt = 0
@@ -282,7 +268,7 @@ def load_captions(data_dir, filenames, embeddings_num):
 
 ################################### load cat data #################################
 def load_cats(data_dir, wordtoix):
-    cats_path = '%s/categories.txt' % (data_dir)
+    cats_path = f'{data_dir}/categories.txt'
     raw_cats = pd.read_csv(cats_path, header=None)
     cats_id = list(raw_cats.iloc[: , 0])
     cats_name = list(raw_cats.iloc[: , 1])
@@ -304,7 +290,7 @@ def load_cats(data_dir, wordtoix):
 
 def load_cat_label(data_dir, glove_wordtoix):
     cat_labels, cat_label_lens = [], []
-    cat_label_path = '%s/categories.txt' % (data_dir)
+    cat_label_path = f'{data_dir}/categories.txt'
     with open(cat_label_path, "r") as f:
         raw_cats = f.read().split('\n')
         for raw_cat in raw_cats:
@@ -374,8 +360,8 @@ def load_glove_vocab(dataset_path):
 def load_glove_emb(data_dir, split, train_names, test_names):
     filepath = os.path.join(data_dir, 'captions_glove.pickle')
     if not os.path.isfile(filepath):
-        train_path = '%s/bbox_label/input_train2014.txt' % (data_dir)
-        test_path = '%s/bbox_label/input_val2014.txt' % (data_dir)
+        train_path = f'{data_dir}/bbox_label/input_train2014.txt'
+        test_path = f'{data_dir}/bbox_label/input_val2014.txt'
 
         train_vocab = load_glove_vocab(train_path)
         test_vocab = load_glove_vocab(test_path)
@@ -415,14 +401,12 @@ def load_glove_emb(data_dir, split, train_names, test_names):
 
 ################################### load image data #################################
 def load_imgs_data(data_dir, split, filenames):
-    filepath = os.path.join(data_dir, '%s_imgs.bigfile'%(split))
+    filepath = os.path.join(data_dir, f'{split}_imgs.bigfile')
     if not os.path.isfile(filepath):
-        print('writing %s imgs'%(split))
+        print(f'writing {split} imgs')
         write_imgs(data_dir, filenames, filepath)
 
-    img_bytes = read_imgs(data_dir, filenames, filepath)
-
-    return img_bytes
+    return read_imgs(data_dir, filenames, filepath)
 
 
 ################################### load other data #################################
@@ -435,7 +419,7 @@ def load_class_id(data_dir, total_num):
     return class_id
 
 def load_filenames(data_dir, split):
-    filepath = '%s/%s/filenames.pickle' % (data_dir, split)
+    filepath = f'{data_dir}/{split}/filenames.pickle'
     if os.path.isfile(filepath):
         with open(filepath, 'rb') as f:
             filenames = pickle.load(f)
@@ -445,7 +429,7 @@ def load_filenames(data_dir, split):
     return filenames
 
 def load_sample_filenames(data_dir):
-    filepath = '%s/sample/filenames.txt' % (data_dir)
+    filepath = f'{data_dir}/sample/filenames.txt'
     if os.path.isfile(filepath):
         with open(filepath, 'rb') as f:
             filenames_sentids = f.readlines()
@@ -465,7 +449,7 @@ def load_sample_filenames(data_dir):
 def load_acts_data(data_dir, split):
     filepath = os.path.join(data_dir, '%s_acts_tf%d.pickle'%(split, cfg.TEST.USE_TF))
     if not os.path.isfile(filepath):
-        print('Error: no such a file %s'%(filepath))
+        print(f'Error: no such a file {filepath}')
         return None
     else:
         with open(filepath, 'rb') as f:
@@ -479,13 +463,13 @@ def load_acts_data(data_dir, split):
 ################################### load anno data #################################
 def load_anns_data(data_dir, split, postfix, ann_type, filenames, imsize, fmsize, cats_index_dict):
     # postfix: _gt_insanns.pickle or _gen_insanns.pickle
-    filepath = os.path.join(data_dir, '%s%s'%(split, postfix))
+    filepath = os.path.join(data_dir, f'{split}{postfix}')
     if not os.path.isfile(filepath):
         if ann_type == 'gt':
             insanns_dict = load_gt_insanns(data_dir, filenames, split, imsize, fmsize, cats_index_dict)
         elif ann_type == 'gen':
             insanns_dict = load_gen_insanns(data_dir, filenames, split, imsize, fmsize, cats_index_dict)
-        
+
         with open(filepath, 'wb') as f:
             pickle.dump([insanns_dict], f, protocol=2)
             print('Save to: ', filepath)
@@ -500,24 +484,22 @@ def load_anns_data(data_dir, split, postfix, ann_type, filenames, imsize, fmsize
 
 
 def load_gt_insanns(data_dir, filenames, split, imsize, fmsize, cats_index_dict):
-    print('creating %s gt_insanns'%(split))
-    if split == 'train':
-        split_name = 'train'
-    else:
-        split_name = 'val'
-    annFile = os.path.join(data_dir, 'insanns', 'instances_%s2014.json'%(split_name))
+    print(f'creating {split} gt_insanns')
+    split_name = 'train' if split == 'train' else 'val'
+    annFile = os.path.join(data_dir, 'insanns', f'instances_{split_name}2014.json')
     coco = COCO(annFile)
 
     insanns_dict = {}
-    
+
     for img_index in range(len(filenames)):
         if img_index % 500 == 0:
             print('%07d / %07d'%(img_index, len(filenames)))
         ### 1. initialize the ann containers
         anno_dict = {}
-        rois = []
-        for branch_index in range(cfg.TREE.BRANCH_NUM):
-            rois.append(np.zeros(shape=(cfg.ROI.BOXES_NUM, cfg.ROI.BOXES_DIM)))
+        rois = [
+            np.zeros(shape=(cfg.ROI.BOXES_NUM, cfg.ROI.BOXES_DIM))
+            for _ in range(cfg.TREE.BRANCH_NUM)
+        ]
         fm_rois = np.zeros(shape=(cfg.ROI.BOXES_NUM, cfg.ROI.BOXES_DIM))
 
         ### 2. fetch image id and the corresponding annotation ids
@@ -541,10 +523,10 @@ def load_gt_insanns(data_dir, filenames, split, imsize, fmsize, cats_index_dict)
         noncrowd_anns = coco.loadAnns(noncrowd_annIds)
 
         ### 5. filter small annotations
-        img_name = '%s/images/%s.jpg' % (data_dir, filenames[img_index])
+        img_name = f'{data_dir}/images/{filenames[img_index]}.jpg'
         I = skimage.io.imread(img_name)
         img_height, img_width = I.shape[0], I.shape[1]
-        
+
         scales = np.zeros(shape=(cfg.TREE.BRANCH_NUM, 2))
         for branch_index in range(cfg.TREE.BRANCH_NUM):
             scales[branch_index, 0] = imsize[branch_index]/float(img_height)

@@ -39,14 +39,12 @@ class Attention(nn.Module):
     def score(self, hidden, encoder_output):
         
         if self.method == 'dot':
-            energy = hidden.dot(encoder_output)
-            return energy
-        
+            return hidden.dot(encoder_output)
         elif self.method == 'general':
             energy = self.attn(encoder_output)
             energy = hidden.dot(energy)
             return energy
-        
+
         elif self.method == 'concat':
             energy = self.attn(torch.cat((hidden, encoder_output), 1))
             energy = energy.squeeze(0)

@@ -25,7 +25,7 @@ class TrainDataset(data.Dataset):
         self.embeddings_num = cfg.TEXT.CAPTIONS_PER_IMAGE
 
         self.imsize = []
-        for i in range(cfg.TREE.BRANCH_NUM):
+        for _ in range(cfg.TREE.BRANCH_NUM):
             self.imsize.append(base_size)
             base_size = base_size * 2
 
@@ -38,13 +38,13 @@ class TrainDataset(data.Dataset):
         train_names = load_filenames(data_dir, 'train')
         test_names = load_filenames(data_dir, 'test')
         self.filenames, self.captions, self.ixtoword, self.wordtoix, self.n_words \
-            = load_text_data(data_dir, split, train_names, test_names)
+                = load_text_data(data_dir, split, train_names, test_names)
 
         self.glove_captions, self.glove_ixtoword, self.glove_wordtoix, \
-            self.glove_embed = load_glove_emb(data_dir, split, train_names, test_names)
+                self.glove_embed = load_glove_emb(data_dir, split, train_names, test_names)
 
         self.cat_labels, self.cat_label_lens, self.sorted_cat_label_indices\
-            = load_cat_label(data_dir, self.glove_wordtoix)
+                = load_cat_label(data_dir, self.glove_wordtoix)
 
         self.class_id = load_class_id(split_dir, len(self.filenames))
         self.number_example = len(self.filenames)

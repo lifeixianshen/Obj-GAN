@@ -29,7 +29,7 @@ class AffineGridGenFunction(Function):
         #    self.batchgrid = self.batchgrid.cuda()
         #    output = output.cuda()
 
-        for i in range(input1.size(0)):
+        for _ in range(input1.size(0)):
             output = torch.bmm(self.batchgrid.view(-1, self.height*self.width, 3), torch.transpose(input1, 1, 2)).view(-1, self.height, self.width, 2)
 
         return output

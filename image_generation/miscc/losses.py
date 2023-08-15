@@ -195,20 +195,25 @@ def patD_loss(netPatD, real_imgs, fake_imgs, conditions):
     else:
         uncond_flag = netPatD.UNCOND_DNET is not None
 
-    if uncond_flag:
-        if len(cfg.GPU_IDS) > 1:
-            real_logits = netPatD.module.UNCOND_DNET(real_features)
-            fake_logits = netPatD.module.UNCOND_DNET(fake_features)
-        else:
-            real_logits = netPatD.UNCOND_DNET(real_features)
-            fake_logits = netPatD.UNCOND_DNET(fake_features)
-        real_errD = nn.BCELoss()(real_logits, real_labels)
-        fake_errD = nn.BCELoss()(fake_logits, fake_labels)
-        errD = ((real_errD * cfg.TRAIN.SMOOTH.UNCOND_LAMBDA + cond_real_errD * cfg.TRAIN.SMOOTH.TXT_LAMBDA) / 2. +
-                (fake_errD * cfg.TRAIN.SMOOTH.UNCOND_LAMBDA + (cond_fake_errD + cond_wrong_errD) * cfg.TRAIN.SMOOTH.TXT_LAMBDA) / 3.)
+    if not uncond_flag:
+        return (
+            cond_real_errD + (cond_fake_errD + cond_wrong_errD) / 2.0
+        ) * cfg.TRAIN.SMOOTH.TXT_LAMBDA
+    if len(cfg.GPU_IDS) > 1:
+        real_logits = netPatD.module.UNCOND_DNET(real_features)
+        fake_logits = netPatD.module.UNCOND_DNET(fake_features)
     else:
-        errD = (cond_real_errD + (cond_fake_errD + cond_wrong_errD) / 2.) * cfg.TRAIN.SMOOTH.TXT_LAMBDA
-    return errD
+        real_logits = netPatD.UNCOND_DNET(real_features)
+        fake_logits = netPatD.UNCOND_DNET(fake_features)
+    real_errD = nn.BCELoss()(real_logits, real_labels)
+    fake_errD = nn.BCELoss()(fake_logits, fake_labels)
+    return (
+        real_errD * cfg.TRAIN.SMOOTH.UNCOND_LAMBDA
+        + cond_real_errD * cfg.TRAIN.SMOOTH.TXT_LAMBDA
+    ) / 2.0 + (
+        fake_errD * cfg.TRAIN.SMOOTH.UNCOND_LAMBDA
+        + (cond_fake_errD + cond_wrong_errD) * cfg.TRAIN.SMOOTH.TXT_LAMBDA
+    ) / 3.0
 
 def shpD_loss(netShpD, real_imgs, fake_imgs, seg_conditions, rois, num_rois):
     # Forward
@@ -243,20 +248,16 @@ def shpD_loss(netShpD, real_imgs, fake_imgs, seg_conditions, rois, num_rois):
         wrong_errD = nn.BCELoss()(wrong_logits, fake_labels[valid_mask])
 
     errD = real_errD
-    if len(valid_mask) > 0:
-        errD += ( fake_errD + wrong_errD ) / 2.
-    else:
-        errD += fake_errD
-
+    errD += ( fake_errD + wrong_errD ) / 2. if len(valid_mask) > 0 else fake_errD
     return errD
 
 
 def objD_loss(netObjD, real_imgs, fake_imgs, seg_conditions, 
     raw_conditions, raw_bt_c_codes, fm_rois, num_rois, is_large_scale=False):
-    real_pooled_feat = netObjD(real_imgs, seg_conditions, fm_rois, num_rois)    
+    real_pooled_feat = netObjD(real_imgs, seg_conditions, fm_rois, num_rois)
     real_features, classes, bt_c_codes = feat_select(real_pooled_feat, raw_bt_c_codes, 
         fm_rois, num_rois, is_large_scale=is_large_scale)
-    
+
     fake_pooled_feat = netObjD(fake_imgs.detach(), seg_conditions, fm_rois, num_rois)
     fake_features, _, _ = feat_select(fake_pooled_feat, raw_bt_c_codes, 
         fm_rois, num_rois, is_large_scale=is_large_scale)
@@ -341,23 +342,16 @@ def objD_loss(netObjD, real_imgs, fake_imgs, seg_conditions,
 
         tmp_errD = fake_errD + cond_fake_errD
         denorm = 3.
-        if real_batch_size > 1:
-            tmp_errD += cond_wrong_errD
-        if len(valid_mask) > 0 and len(classes2) > 0:
-            tmp_errD += cond_wrong_errD2
-            denorm += 1.
-        errD += tmp_errD / denorm
     else:
         errD += cond_real_errD
         tmp_errD = cond_fake_errD
         denorm = 2.
-        if real_batch_size > 1:
-            tmp_errD += cond_wrong_errD
-        if len(valid_mask) > 0 and len(classes2) > 0:
-            tmp_errD += cond_wrong_errD2
-            denorm += 1.
-        errD += tmp_errD / denorm
-
+    if real_batch_size > 1:
+        tmp_errD += cond_wrong_errD
+    if len(valid_mask) > 0 and len(classes2) > 0:
+        tmp_errD += cond_wrong_errD2
+        denorm += 1.
+    errD += tmp_errD / denorm
     return errD
 
 

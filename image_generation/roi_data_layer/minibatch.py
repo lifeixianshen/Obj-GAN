@@ -22,9 +22,9 @@ def get_minibatch(roidb, num_classes):
   # Sample random scales to use for each image in this batch
   random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
                   size=num_images)
-  assert(cfg.TRAIN.BATCH_SIZE % num_images == 0), \
-    'num_images ({}) must divide BATCH_SIZE ({})'. \
-    format(num_images, cfg.TRAIN.BATCH_SIZE)
+  assert (
+      cfg.TRAIN.BATCH_SIZE % num_images == 0
+  ), f'num_images ({num_images}) must divide BATCH_SIZE ({cfg.TRAIN.BATCH_SIZE})'
 
   # Get the input image blob, formatted for caffe
   im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
@@ -33,7 +33,7 @@ def get_minibatch(roidb, num_classes):
 
   assert len(im_scales) == 1, "Single batch only"
   assert len(roidb) == 1, "Single batch only"
-  
+
   # gt boxes: (x1, y1, x2, y2, cls)
   if cfg.TRAIN.USE_ALL_GT:
     # Include all ground truth boxes

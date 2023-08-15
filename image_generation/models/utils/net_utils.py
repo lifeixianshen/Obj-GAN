@@ -29,9 +29,7 @@ def weights_normal_init(model, dev=0.01):
             weights_normal_init(m, dev)
     else:
         for m in model.modules():
-            if isinstance(m, nn.Conv2d):
-                m.weight.data.normal_(0.0, dev)
-            elif isinstance(m, nn.Linear):
+            if isinstance(m, (nn.Conv2d, nn.Linear)):
                 m.weight.data.normal_(0.0, dev)
 
 
@@ -54,7 +52,7 @@ def vis_detections(im, class_name, dets, thresh=0.8):
         bbox = tuple(int(np.round(x)) for x in dets[i, :4])
         score = dets[i, -1]
         if score > thresh:
-            cv2.rectangle(im, bbox[0:2], bbox[2:4], (0, 204, 0), 2)
+            cv2.rectangle(im, bbox[:2], bbox[2:4], (0, 204, 0), 2)
             cv2.putText(im, '%s: %.3f' % (class_name, score), (bbox[0], bbox[1] + 15), cv2.FONT_HERSHEY_PLAIN,
                         1.0, (0, 0, 255), thickness=1)
     return im
@@ -159,9 +157,9 @@ def _affine_grid_gen(rois, input_size, grid_size):
       (y2 - y1) / (height - 1),
       (y1 + y2 - height + 1) / (height - 1)], 1).view(-1, 2, 3)
 
-    grid = F.affine_grid(theta, torch.Size((rois.size(0), 1, grid_size, grid_size)))
-
-    return grid
+    return F.affine_grid(
+        theta, torch.Size((rois.size(0), 1, grid_size, grid_size))
+    )
 
 def _affine_theta(rois, input_size):
 
@@ -176,23 +174,17 @@ def _affine_theta(rois, input_size):
 
     zero = Variable(rois.data.new(rois.size(0), 1).zero_())
 
-    # theta = torch.cat([\
-    #   (x2 - x1) / (width - 1),
-    #   zero,
-    #   (x1 + x2 - width + 1) / (width - 1),
-    #   zero,
-    #   (y2 - y1) / (height - 1),
-    #   (y1 + y2 - height + 1) / (height - 1)], 1).view(-1, 2, 3)
-
-    theta = torch.cat([\
-      (y2 - y1) / (height - 1),
-      zero,
-      (y1 + y2 - height + 1) / (height - 1),
-      zero,
-      (x2 - x1) / (width - 1),
-      (x1 + x2 - width + 1) / (width - 1)], 1).view(-1, 2, 3)
-
-    return theta
+    return torch.cat(
+        [
+            (y2 - y1) / (height - 1),
+            zero,
+            (y1 + y2 - height + 1) / (height - 1),
+            zero,
+            (x2 - x1) / (width - 1),
+            (x1 + x2 - width + 1) / (width - 1),
+        ],
+        1,
+    ).view(-1, 2, 3)
 
 def compare_grid_sample():
     # do gradcheck
